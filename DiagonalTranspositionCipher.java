@@ -9,17 +9,18 @@ public class DiagonalTranspositionCipher {
 	private String inputString = "";
 	private String outputString = "";
 	private dictionary dictionary;
-	public DiagonalTranspositionCipher(String dictionaryName) throws IOException {
-		this.dictionary = new dictionary(dictionaryName);
+	public DiagonalTranspositionCipher(dictionary enDictionary){
+		this.dictionary = enDictionary;
 	}
 	
-	public void encodeInput(String inputString) {
-		this.inputString = inputString;
-		encodeDiagonal(inputString, 8);
-	}
 	public Boolean decodeInput(String inputString) {
 		this.inputString = inputString;
-		return decodeDiagonalInput();
+		Boolean flagReverse = decodeReverseDiagonalInput();
+		if(!flagReverse)
+			return decodeDiagonalInput();
+		else {
+			return flagReverse;
+		}
 	}
 	
 	private Boolean decodeReverseDiagonalInput() {
@@ -31,17 +32,19 @@ public class DiagonalTranspositionCipher {
 		int numOfRow = 0;
 		
 		for(; numOfColumn<numOfChar ;numOfColumn++) {
-			int[] scanPoint = new int[] {0,0};
+			//this step similar to columnar cipher
+			int inputScanPosition = 0;
 			if(numOfChar%numOfColumn == 0)
 				numOfRow = numOfChar/numOfColumn;
 			else
 				numOfRow = (numOfChar/numOfColumn) + 1;
 			String[][] arraysOfCharacters = new String[numOfRow][numOfColumn];
-			String tmpOutputString = "";
 			
-			int startOfScanLine = 0;
+			//initiate variables scanPoint[1] is x, scanPoint[0] is y
+			int[] scanPoint = new int[] {0,0};
+			String tmpOutputString = "";
+			//endscancount is number of scanning row
 			int endScanCount = numOfColumn+numOfRow - 1;
-			int inputScanPosition = 0;
 			int tmpScanCount = 0;
 			while(tmpScanCount <= endScanCount) {
 				if (inputScanPosition == filteredInputString.length()) {
@@ -59,17 +62,19 @@ public class DiagonalTranspositionCipher {
 						inputScanPosition++;
 					}
 				}
-				if(scanPoint[1] == startOfScanLine) {
+				
+				//whenever the x is equal the initial of scanning lines means that is the end of scanning line
+				if(scanPoint[1] == tmpScanCount) {
 					tmpScanCount++;
-					if (numOfColumn > numOfRow) {
-						startOfScanLine = scanPoint[0] = Math.min(numOfColumn-1,tmpScanCount);
-					}else {
-						startOfScanLine = scanPoint[0] = Math.min(numOfRow-1,tmpScanCount);
+					scanPoint[0] = Math.min(numOfRow - 1, tmpScanCount);
+					if(tmpScanCount <= numOfRow - 1)
+						scanPoint[1] = 0;
+					else {
+						scanPoint[1] = tmpScanCount - numOfRow + 1;
 					}
-					scanPoint[1] = tmpScanCount - scanPoint[0];
 				}else {
-					scanPoint[0]--;
 					scanPoint[1]++;
+					scanPoint[0]--;
 				}
 			}
 			int whiteSpaceIndex = 0;
@@ -102,32 +107,87 @@ public class DiagonalTranspositionCipher {
 		}return false;
 	}
 	
-	public void encodeReverseDiagonal(String input, int numOfColumn) {
-		String filteredInputString = input;
+	public String decodeManualReverseDiagonal (String inputString, int colSize) {
+		String filteredInputString = inputString;
 		filteredInputString = filteredInputString.replace(" ", "");
 		char[] charArrayOfInput = filteredInputString.toCharArray();
 		int numOfChar = charArrayOfInput.length;
+		int numOfColumn = colSize;
 		int numOfRow = 0;
-		int[] scanPoint = new int[] {0,0};
+		
+		int inputScanPosition = 0;
 		if(numOfChar%numOfColumn == 0)
 			numOfRow = numOfChar/numOfColumn;
 		else
 			numOfRow = (numOfChar/numOfColumn) + 1;
 		String[][] arraysOfCharacters = new String[numOfRow][numOfColumn];
-		int startSubPosition = 0;
-		for (int i = 1; i <= numOfRow; i++) {
-			int endSubPostion = (i*numOfColumn) - 1;
-			if(i == numOfRow)
-				endSubPostion = charArrayOfInput.length - 1;
-			int tmp = 0;
-			for (; startSubPosition <= endSubPostion; startSubPosition++) {
-				arraysOfCharacters[i-1][tmp] = Character.toString(charArrayOfInput[startSubPosition]);
-				tmp++;
+		
+		int[] scanPoint = new int[] {0,0};
+		String tmpOutputString = "";
+		int endScanCount = numOfColumn+numOfRow - 1;
+		int tmpScanCount = 0;
+		while(tmpScanCount <= endScanCount) {
+			if (inputScanPosition == filteredInputString.length()) {
+				break;
+			}
+			if (scanPoint[1] < numOfColumn) {
+				if (scanPoint[0] < numOfRow - 1) {
+					arraysOfCharacters[scanPoint[0]][scanPoint[1]] = Character.toString(charArrayOfInput[inputScanPosition]);
+					inputScanPosition++;
+				}else if(scanPoint[0] == numOfRow - 1 && scanPoint[1] <= numOfChar%numOfColumn-1) {
+					arraysOfCharacters[scanPoint[0]][scanPoint[1]] = Character.toString(charArrayOfInput[inputScanPosition]);
+					inputScanPosition++;
+				}else if (scanPoint[0] == numOfRow - 1 && numOfChar%numOfColumn == 0) {
+					arraysOfCharacters[scanPoint[0]][scanPoint[1]] = Character.toString(charArrayOfInput[inputScanPosition]);
+					inputScanPosition++;
+				}
+			}
+			if(scanPoint[1] == tmpScanCount) {
+				tmpScanCount++;
+				scanPoint[0] = Math.min(numOfRow - 1, tmpScanCount);
+				if(tmpScanCount <= numOfRow - 1)
+					scanPoint[1] = 0;
+				else {
+					scanPoint[1] = tmpScanCount - numOfRow + 1;
+				}
+			}else {
+				scanPoint[1]++;
+				scanPoint[0]--;
+			}
+		}
+		int whiteSpaceIndex = 0;
+		List<Integer> listOfWhiteSpaceIndexes = new ArrayList<Integer>();
+		while((whiteSpaceIndex = inputString.indexOf(' ', whiteSpaceIndex + 1))>0)
+			listOfWhiteSpaceIndexes.add(whiteSpaceIndex);
+		for (int i = 0; i < numOfRow; i++) {
+			for (int j = 0; j < numOfColumn; j++) {
+				tmpOutputString += arraysOfCharacters[i][j];
+				if(tmpOutputString.length() == inputString.length())
+					break;
+			}
+		}
+		return tmpOutputString;
+	}
+	
+	public void encodeReverseDiagonal(String input, int numOfColumn) {
+		String filteredInputString = input;
+		filteredInputString = filteredInputString.toLowerCase();
+		filteredInputString = filteredInputString.replace(" ", "");
+		int numOfChar = filteredInputString.length();
+		int numOfRow = numOfChar/numOfColumn;
+		int[] scanPoint = new int[] {0,0};
+		if(numOfChar%numOfColumn > 0)
+			numOfRow = numOfRow + 1;
+		String[] subStrings = new String[numOfRow];
+		for (int i = 1; i <= subStrings.length; i++) {
+			if(i == subStrings.length) {
+				subStrings[i-1] = filteredInputString.substring((i-1)*numOfColumn);
+			}else {
+				subStrings[i-1] = filteredInputString.substring((i-1)*numOfColumn, i*numOfColumn);
 			}
 		}
 		
 		String tmpOutputString = "";
-		int startOfScanLine = 0;
 		int endScanCount = numOfColumn+numOfRow - 1;
 		int tmpScanCount = 0;
 		while(tmpScanCount <= endScanCount) {
@@ -136,21 +196,21 @@ public class DiagonalTranspositionCipher {
 			}
 			if (scanPoint[1] < numOfColumn) {
 				if (scanPoint[0] < numOfRow - 1) {
-					tmpOutputString += arraysOfCharacters[scanPoint[0]][scanPoint[1]];
-				}else if(scanPoint[0] == numOfRow - 1 && scanPoint[1] <= numOfChar%numOfColumn-1)
-					tmpOutputString += arraysOfCharacters[scanPoint[0]][scanPoint[1]];
-				else if (scanPoint[0] == numOfRow - 1 && numOfChar%numOfColumn == 0) {
-					tmpOutputString += arraysOfCharacters[scanPoint[0]][scanPoint[1]];
+					tmpOutputString += subStrings[scanPoint[0]].charAt(scanPoint[1]);
+				}else if(scanPoint[0] == numOfRow - 1 && scanPoint[1] <= numOfChar%numOfColumn-1) {
+					tmpOutputString += subStrings[scanPoint[0]].charAt(scanPoint[1]);
+				}else if (scanPoint[0] == numOfRow - 1 && numOfChar%numOfColumn == 0) {
+					tmpOutputString += subStrings[scanPoint[0]].charAt(scanPoint[1]);
 				}
 			}
-			if(scanPoint[1] == startOfScanLine) {
+			if(scanPoint[1] == tmpScanCount) {
 				tmpScanCount++;
-				if (numOfColumn > numOfRow) {
-					startOfScanLine = scanPoint[0] = Math.min(numOfColumn-1,tmpScanCount);
-				}else {
-					startOfScanLine = scanPoint[0] = Math.min(numOfRow-1,tmpScanCount);
+				scanPoint[0] = Math.min(numOfRow - 1, tmpScanCount);
+				if(tmpScanCount <= numOfRow - 1)
+					scanPoint[1] = 0;
+				else {
+					scanPoint[1] = tmpScanCount - numOfRow + 1;
 				}
-				scanPoint[1] = tmpScanCount - scanPoint[0];
 			}else {
 				scanPoint[0]--;
 				scanPoint[1]++;
@@ -161,6 +221,7 @@ public class DiagonalTranspositionCipher {
 	
 	public void encodeDiagonal(String input, int numOfColumn) {
 		String filteredInputString = input;
+		filteredInputString = filteredInputString.toLowerCase();
 		filteredInputString = filteredInputString.replace(" ", "");
 		char[] charArrayOfInput = filteredInputString.toCharArray();
 		int numOfChar = charArrayOfInput.length;
@@ -206,11 +267,7 @@ public class DiagonalTranspositionCipher {
 				if(tmpScanCount <= numOfRow - 1)
 					scanPoint[1] = 0;
 				else {
-					if (numOfColumn > numOfRow) {
-						scanPoint[1] = tmpScanCount - numOfRow + 1;
-					}else {
-						scanPoint[1] = tmpScanCount - numOfColumn + 1;
-					}
+					scanPoint[1] = tmpScanCount - numOfRow + 1;
 				}
 			}else {
 				scanPoint[1]++;
@@ -301,11 +358,68 @@ public class DiagonalTranspositionCipher {
 		}return false;
 	}
 
+	public String decodeManualDiagonalInput(String inputString, int colSize) {
+		String filteredInputString = inputString;
+		filteredInputString = filteredInputString.replace(" ", "");
+		char[] charArrayOfInput = filteredInputString.toCharArray();
+		int numOfChar = charArrayOfInput.length;
+		int numOfColumn = colSize;
+		int numOfRow = 0;
+		int inputScanPosition = 0;
+		if(numOfChar%numOfColumn == 0)
+			numOfRow = numOfChar/numOfColumn;
+		else
+			numOfRow = (numOfChar/numOfColumn) + 1;
+		String[][] arraysOfCharacters = new String[numOfRow][numOfColumn];
+		
+		int[] scanPoint = new int[] {numOfRow - 1,0};
+		String tmpOutputString = "";
+		int startOfScanLine = numOfRow - 1;
+		int endScanCount = numOfColumn+numOfRow - 1;
+		int tmpScanCount = 0;
+		while(tmpScanCount <= endScanCount) {
+			if (inputScanPosition == filteredInputString.length()) {
+				break;
+			}
+			if (scanPoint[1] < numOfColumn) {
+				if (scanPoint[0] < numOfRow - 1) {
+					arraysOfCharacters[scanPoint[0]][scanPoint[1]] = Character.toString(charArrayOfInput[inputScanPosition]);
+					inputScanPosition++;
+				}else if(scanPoint[0] == numOfRow - 1 && scanPoint[1] <= numOfChar%numOfColumn-1) {
+					arraysOfCharacters[scanPoint[0]][scanPoint[1]] = Character.toString(charArrayOfInput[inputScanPosition]);
+					inputScanPosition++;
+				}else if (scanPoint[0] == numOfRow - 1 && numOfChar%numOfColumn == 0) {
+					arraysOfCharacters[scanPoint[0]][scanPoint[1]] = Character.toString(charArrayOfInput[inputScanPosition]);
+					inputScanPosition++;
+				}
+			}
+			if(scanPoint[1] == tmpScanCount) {
+				tmpScanCount++;
+				startOfScanLine--;
+				scanPoint[0] = Math.max(0, startOfScanLine);
+				if(tmpScanCount <= numOfRow - 1)
+					scanPoint[1] = 0;
+				else {
+					scanPoint[1] = tmpScanCount - numOfRow + 1;
+				}
+			}else {
+				scanPoint[1]++;
+				scanPoint[0]++;
+			}
+		}
+		
+		for (int i = 0; i < numOfRow; i++) {
+			for (int j = 0; j < numOfColumn; j++) {
+				tmpOutputString += arraysOfCharacters[i][j];
+				if(tmpOutputString.length() == inputString.length())
+					break;
+			}
+		}
+		return tmpOutputString;
+	}
+	
 	public String getOutputString() {
 		return outputString;
 	}
 
-	public void setOutputString(String outputString) {
-		this.outputString = outputString;
-	}
 }

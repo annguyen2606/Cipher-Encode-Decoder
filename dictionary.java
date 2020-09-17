@@ -37,7 +37,7 @@ public class dictionary {
     	int scanRange = 0;
     	for(;scanPositionEnd <= end; scanPositionEnd++) {
 			String subString = input.substring(scanPositionStart, scanPositionEnd);
-			if(dictionaryListString.contains(subString) && scanPositionEnd < input.length()) {
+			if((dictionaryListString.contains(subString) || (subString.matches("a") && scanPositionEnd == 1)) && scanPositionEnd < input.length()) {
 				words.push(subString);
 				searchWord(input.substring(scanPositionEnd,end), words);
 				break;
@@ -93,10 +93,13 @@ public class dictionary {
 		}
 	}
     
+	
     public String getResult() {
     	String tmpString = inputString;
     	String inputWithoutSpaceString = tmpString.replace(" ", "");
     	String resultString = "";
+    	List<List<String>> tmpList = new ArrayList<List<String>>();
+    	tmpList = possibleResult;
     	for (List<String> listString : possibleResult) {
 			String possibleResultString = "";
 			for (String string : listString) {
@@ -105,6 +108,8 @@ public class dictionary {
 			if(possibleResultString.length() == inputWithoutSpaceString.length())
 				resultString = inputString;
 		}
+    	tmpList.removeAll(possibleResult);
+    	this.possibleResult = tmpList;
     	return resultString;
     }
     
@@ -116,6 +121,9 @@ public class dictionary {
     
     public void setInput(String input) {
 		this.inputString = input;
+		input = input.toLowerCase();
+		input = input.replace(" ", "");
+		this.searchWord(input, new Stack<String>());
 	}
 
 
